@@ -40,5 +40,13 @@
   },
   "devDependencies": {
     "nodemon": "^3.0.1"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "sqlite3",
+      "bcrypt",
+      "@ffmpeg-installer/ffmpeg",
+      "@ffprobe-installer/ffprobe"
+    ]
   }
 }

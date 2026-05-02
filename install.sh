@@ -103,40 +103,22 @@ fi
 # 9. Install dependencies & build native modules
 # ─────────────────────────────────────────
 echo "⚙️ Installing dependencies..."
+# pnpm.onlyBuiltDependencies di package.json meng-approve native modules
+# (sqlite3, bcrypt, ffmpeg/ffprobe installer) supaya lifecycle scripts jalan.
 pnpm install
 
-echo "🔨 Approving & building native modules (sqlite3, bcrypt, ffmpeg)..."
-# Buat file .pnpmfile.cjs untuk allow semua build scripts secara otomatis
-cat > "$HOME/streamflow/.pnpmfile.cjs" << 'PNPMEOF'
-function readPackage(pkg, context) {
-  return pkg;
-}
-
-module.exports = {
-  hooks: {
-    readPackage,
-  },
-};
-PNPMEOF
-
-# Approve semua build scripts yang dibutuhkan
-pnpm approve-builds --all 2>/dev/null || true
-
-# Reinstall dengan build scripts diizinkan
-pnpm install --ignore-scripts=false
-
-# Pastikan sqlite3 native binary terkompilasi
-echo "🔨 Rebuilding sqlite3 native binary..."
-cd "$HOME/streamflow/node_modules/.pnpm/sqlite3@5.1.7/node_modules/sqlite3" 2>/dev/null && \
-    npm run install --build-from-source 2>/dev/null || \
-    node-pre-gyp install --fallback-to-build 2>/dev/null || true
-cd "$HOME/streamflow"
-
-# Pastikan bcrypt native binary terkompilasi
-echo "🔨 Rebuilding bcrypt native binary..."
-cd "$HOME/streamflow/node_modules/.pnpm/bcrypt@6.0.0/node_modules/bcrypt" 2>/dev/null && \
-    npm run install --build-from-source 2>/dev/null || true
-cd "$HOME/streamflow"
+echo "🔍 Verifying native modules (sqlite3, bcrypt)..."
+if ! node -e "require('sqlite3'); require('bcrypt');" 2>/dev/null; then
+    echo "⚠️  Native modules belum ter-build, mencoba pnpm rebuild..."
+    pnpm rebuild
+    if ! node -e "require('sqlite3'); require('bcrypt');" 2>/dev/null; then
+        echo "❌ Native modules masih gagal ter-load."
+        echo "   Coba reset dan install ulang manual:"
+        echo "     cd ~/streamflow && rm -rf node_modules && pnpm install"
+        exit 1
+    fi
+fi
+echo "✅ Native modules OK"
 
 pnpm run generate-secret
 
